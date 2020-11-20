@@ -8,6 +8,7 @@
 #ifndef UFO_INSTANTIATEOBSFILTERFACTORY_H_
 #define UFO_INSTANTIATEOBSFILTERFACTORY_H_
 
+#include "ufo/filters/PracticalBoundsCheck.h"
 #include "oops/base/instantiateObsFilterFactory.h"
 #include "oops/interface/ObsFilter.h"
 #include "ufo/filters/BackgroundCheck.h"
@@ -83,6 +84,9 @@ template<typename MODEL> void instantiateObsFilterFactory() {
            legacyGaussianThinningMaker("Gaussian_Thinning");
   static oops::FilterMaker<MODEL, oops::ObsFilter<MODEL, ufo::TemporalThinning> >
            legacyTemporalThinningMaker("TemporalThinning");
+    
+  static oops::FilterMaker<MODEL, oops::ObsFilter<MODEL, ufo::PracticalBoundsCheck> >
+     practicalBoundsCheckMaker("Practical Bounds Check");
 }
 
 }  // namespace ufo
