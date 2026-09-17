@@ -95,7 +95,7 @@ void ObsErrorFactorSnowElevationDiff::compute(
       inflation_factor = 1.0f / inflation_factor_1;
       
       // Inflate error by the inflation factor
-      obserr[iv][iloc] *= inflation_factor;
+      obserr[iv][iloc] = inflation_factor;
     }
   }
   
