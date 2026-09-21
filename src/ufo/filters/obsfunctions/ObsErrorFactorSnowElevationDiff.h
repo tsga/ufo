@@ -29,6 +29,7 @@ class ObsErrorFactorSnowElevationDiffParameters : public oops::Parameters {
   oops::Parameter<std::string> obs_elevation_var{"observation_elevation", "MetaData/stationElevation", this};
   oops::Parameter<std::string> model_elevation_var{"model_elevation", "GeoVaLs/filtered_orography", this};
   oops::Parameter<float> elevation_scale_m{"elevation_scale_m", 800., this};
+  oops::Parameter<float> max_inflation_factor{"max_inflation_factor", 10., this};
 };
 
 // -----------------------------------------------------------------------------
@@ -56,6 +57,7 @@ class ObsErrorFactorSnowElevationDiffParameters : public oops::Parameters {
 ///             observation_elevation: MetaData/stationElevation
 ///             model_elevation: GeoVaLs/filtered_orography
 ///             elevation_scale_m: 800.0   // (Unit m) 
+///             max_inflation_factor: 5.0
 ///
 class ObsErrorFactorSnowElevationDiff : public ObsFunctionBase<float> {
  public:

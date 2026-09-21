@@ -14,6 +14,8 @@
 #include "oops/util/Logger.h"
 #include "oops/util/missingValues.h"
 #include "ufo/filters/ObsFilterData.h"
+#include "ioda/distribution/Accumulator.h"
+#include "ioda/distribution/Distribution.h"
 
 namespace ufo {
 
@@ -55,7 +57,9 @@ void ObsErrorFactorSnowElevationDiff::compute(
   oops::Log::trace() << "ObsErrorFactorSnowElevationDiff compute start" << std::endl;
   
   const float missing = util::missingValue<float>();
+  oops::Log::warning() << "using missing value " << missing << std::endl;
   const float h_scale = options_->elevation_scale_m.value();
+  const float max_infl_factor = options_->max_inflation_factor.value();
 
   // If no observations on this processor then nothing to do
   if (data.nlocs() == 0) return;
@@ -77,28 +81,41 @@ void ObsErrorFactorSnowElevationDiff::compute(
   data.get(Variable(model_elev_var), model_elevation);
 
   // Compute inflation factor for each observation
-  float dz, inflation_factor_1, inflation_factor;
+  float dz, inflation_factor, inflation_factor_1;
   int iv = 0;
+  int count_exparg_toobig = 0;
 
   for (size_t iloc = 0; iloc < nlocs; ++iloc) {
-    // If missing observation or model elevation, set obserror to missing
+    // If missing observation or model elevation, set obserror to max/missing 
     if (ob_elevation[iloc] == missing || model_elevation[iloc] == missing) {
-      obserr[iv][iloc] = missing;
+      obserr[iv][iloc] =  max_infl_factor;  //missing?
     } else {
+
       // Compute elevation difference
       dz = std::abs(model_elevation[iloc] - ob_elevation[iloc]);
+
+      // inflation factor: inflated error = obs_err / exp(-1 * dz^2 / (h^2))
+      inflation_factor_1 = dz * dz / (h_scale * h_scale);
+
+      if (inflation_factor_1 > 40.0) {  // avoid float overflow in arg of exp()
+          obserr[iv][iloc] = max_infl_factor;
+          count_exparg_toobig = count_exparg_toobig + 1;   // count_exparg_toobig_accumulator->addTerm(iloc, 1);
+      } else {
       
-      // Compute inflation_factor_1 = exp(-1 * dz^2 / (h^2))
-      inflation_factor_1 = std::exp(-1.0f * dz * dz / (h_scale * h_scale));
-      
-      // Compute output inflation_factor = 1 / inflation_factor_1
-      inflation_factor = 1.0f / inflation_factor_1;
-      
-      // Inflate error by the inflation factor
-      obserr[iv][iloc] = inflation_factor;
+          inflation_factor = std::exp(inflation_factor_1);
+          // min max cutoff 
+	  inflation_factor = std::max(1.0f, inflation_factor); 
+          inflation_factor = std::min(max_infl_factor, inflation_factor);
+
+          obserr[iv][iloc] = inflation_factor;
+      }
     }
   }
-  
+  //const std::size_t count_exparg_toobig = count_exparg_toobig_accumulator->computeResult();
+  if (count_exparg_toobig > 0) {
+    oops::Log::warning() << "ObsErrorFactorSnowElevationDiff WARNING: " << count_exparg_toobig
+      << " instance(s) of exponential argument too large." << std::endl;
+  }
   oops::Log::trace() << "ObsErrorFactorSnowElevationDiff compute complete" << std::endl;
 }
 
